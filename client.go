@@ -50,6 +50,22 @@ func (t *Tsutsu) Queues() ([]model.Queue, error) {
 	return queues, nil
 }
 
+func (t *Tsutsu) Queue(name string) (model.Queue, error) {
+	decoder, err := get(fmt.Sprintf("%s/queue/%s", t.baseURL, name))
+	if err != nil {
+		return model.Queue{}, err
+	}
+
+	defer decoder.Close()
+	var queue model.Queue
+
+	if err := decoder.Decode(&queue); err != nil {
+		return model.Queue{}, err
+	}
+
+	return queue, nil
+}
+
 func (t *Tsutsu) Routings() ([]model.Routing, error) {
 	decoder, err := get(t.baseURL + "/routings")
 	if err != nil {
