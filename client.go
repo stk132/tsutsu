@@ -1,6 +1,8 @@
 package tsutsu
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/fireworq/fireworq/model"
@@ -64,6 +66,42 @@ func (t *Tsutsu) Queue(name string) (model.Queue, error) {
 	}
 
 	return queue, nil
+}
+
+func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) error {
+	m := model.Queue{
+		Name:            name,
+		PollingInterval: pollingInterval,
+		MaxWorkers:      maxWorkers,
+	}
+
+	buf, err := json.Marshal(&m)
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewReader(buf)
+	url := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
+	req, err := http.NewRequest(http.MethodPut, url, r)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
+		return err
+	}
+
+	if res.StatusCode == http.StatusOK {
+		return nil
+	} else {
+		return errors.New(fmt.Sprintf("create queue error. status_code: %d", res.StatusCode))
+	}
 }
 
 func (t *Tsutsu) Routings() ([]model.Routing, error) {
