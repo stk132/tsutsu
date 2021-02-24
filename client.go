@@ -82,3 +82,19 @@ func (t *Tsutsu) Routings() ([]model.Routing, error) {
 	return routings, err
 
 }
+
+func (t *Tsutsu) Routing(jobCategory string) (model.Routing, error) {
+	decoder, err := get(fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory))
+	if err != nil {
+		return model.Routing{}, err
+	}
+
+	defer decoder.Close()
+
+	var routing model.Routing
+	if err := decoder.Decode(&routing); err != nil {
+		return model.Routing{}, err
+	}
+
+	return routing, nil
+}
