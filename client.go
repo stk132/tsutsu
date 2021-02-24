@@ -136,3 +136,38 @@ func (t *Tsutsu) Routing(jobCategory string) (model.Routing, error) {
 
 	return routing, nil
 }
+
+func (t *Tsutsu) CreateRouting(jobCategory, queueName string) error {
+	rt := model.Routing{
+		QueueName:   queueName,
+		JobCategory: jobCategory,
+	}
+
+	buf, err := json.Marshal(&rt)
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewReader(buf)
+	url := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
+	req, err := http.NewRequest(http.MethodPut, url, r)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
+		return err
+	}
+
+	if res.StatusCode == http.StatusOK {
+		return nil
+	} else {
+		return errors.New(fmt.Sprintf("create routing error. status_code: %d", res.StatusCode))
+	}
+}
