@@ -98,7 +98,7 @@ func (t *Tsutsu) Stats(queueName string) (QueueStats, error) {
 		return QueueStats{}, err
 	}
 
-	decoder.Close()
+	defer decoder.Close()
 
 	var stats QueueStats
 	if err := decoder.Decode(&stats); err != nil {
