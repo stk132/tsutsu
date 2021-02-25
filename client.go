@@ -91,6 +91,23 @@ func (t *Tsutsu) Queue(name string) (model.Queue, error) {
 	return queue, nil
 }
 
+func (t *Tsutsu) Stats(queueName string) (QueueStats, error) {
+	url := fmt.Sprintf("%s/queue/%s/stats", t.baseURL, queueName)
+	decoder, err := get(url)
+	if err != nil {
+		return QueueStats{}, err
+	}
+
+	decoder.Close()
+
+	var stats QueueStats
+	if err := decoder.Decode(&stats); err != nil {
+		return QueueStats{}, err
+	}
+
+	return stats, nil
+}
+
 func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) (model.Queue, error) {
 	m := model.Queue{
 		Name:            name,
