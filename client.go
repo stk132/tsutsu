@@ -166,7 +166,7 @@ func (t *Tsutsu) Routing(jobCategory string) (model.Routing, error) {
 	return routing, nil
 }
 
-func (t *Tsutsu) CreateRouting(jobCategory, queueName string) error {
+func (t *Tsutsu) CreateRouting(jobCategory, queueName string) (model.Routing, error) {
 	rt := model.Routing{
 		QueueName:   queueName,
 		JobCategory: jobCategory,
@@ -174,29 +174,31 @@ func (t *Tsutsu) CreateRouting(jobCategory, queueName string) error {
 
 	buf, err := json.Marshal(&rt)
 	if err != nil {
-		return err
+		return model.Routing{}, err
 	}
 
 	r := bytes.NewReader(buf)
 	url := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
 	req, err := http.NewRequest(http.MethodPut, url, r)
 	if err != nil {
-		return err
+		return model.Routing{}, err
 	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return model.Routing{}, err
 	}
 
 	defer res.Body.Close()
-	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
-		return err
-	}
 
 	if res.StatusCode == http.StatusOK {
-		return nil
+		decoder := json.NewDecoder(res.Body)
+		var routing model.Routing
+		if err := decoder.Decode(&routing); err != nil {
+			return model.Routing{}, err
+		}
+		return routing, nil
 	} else {
-		return errors.New(fmt.Sprintf("create routing error. status_code: %d", res.StatusCode))
+		return model.Routing{}, errors.New(fmt.Sprintf("create routing error. status_code: %d", res.StatusCode))
 	}
 }
