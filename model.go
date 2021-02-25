@@ -14,3 +14,8 @@ type QueueStats struct {
 	IdleWorkers            int64 `json:"idle_workers"`
 	ActiveNodes            int64 `json:"active_nodes"`
 }
+
+type NodeInfo struct {
+	ID   string `json:"id"`
+	Host string `json:"host"`
+}

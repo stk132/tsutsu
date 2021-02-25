@@ -108,6 +108,22 @@ func (t *Tsutsu) Stats(queueName string) (QueueStats, error) {
 	return stats, nil
 }
 
+func (t *Tsutsu) Node(queueName string) (NodeInfo, error) {
+	url := fmt.Sprintf("%s/queue/%s/node", t.baseURL, queueName)
+	decoder, err := get(url)
+	if err != nil {
+		return NodeInfo{}, err
+	}
+
+	defer decoder.Close()
+
+	var node NodeInfo
+	if err := decoder.Decode(&node); err != nil {
+		return NodeInfo{}, err
+	}
+	return node, nil
+}
+
 func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) (model.Queue, error) {
 	m := model.Queue{
 		Name:            name,
