@@ -59,6 +59,15 @@ func put(url string, r io.Reader) (*httpBodyDecoder, error) {
 	return do(req)
 }
 
+func httpDelete(url string) (*httpBodyDecoder, error) {
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return do(req)
+}
+
 func (t *Tsutsu) Queues() ([]model.Queue, error) {
 	decoder, err := get(t.baseURL + "/queues")
 	if err != nil {
@@ -261,7 +270,7 @@ func (t *Tsutsu) CreateRouting(jobCategory, queueName string) (model.Routing, er
 
 func (t *Tsutsu) DeleteRouting(jobCategory string) (model.Routing, error) {
 	url := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
-	decoder, err := put(url, nil)
+	decoder, err := httpDelete(url)
 	if err != nil {
 		return model.Routing{}, err
 	}
