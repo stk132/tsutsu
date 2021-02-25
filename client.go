@@ -36,6 +36,29 @@ func get(url string) (*httpBodyDecoder, error) {
 	return newHttpBodyDecoder(res.Body), nil
 }
 
+func do(req *http.Request) (*httpBodyDecoder, error) {
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		defer res.Body.Close()
+		return nil, errors.New(fmt.Sprintf("status_code: %d", res.StatusCode))
+	}
+
+	return newHttpBodyDecoder(res.Body), nil
+}
+
+func put(url string, r io.Reader) (*httpBodyDecoder, error) {
+	req, err := http.NewRequest(http.MethodPut, url, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return do(req)
+}
+
 func (t *Tsutsu) Queues() ([]model.Queue, error) {
 	decoder, err := get(t.baseURL + "/queues")
 	if err != nil {
@@ -201,4 +224,20 @@ func (t *Tsutsu) CreateRouting(jobCategory, queueName string) (model.Routing, er
 	} else {
 		return model.Routing{}, errors.New(fmt.Sprintf("create routing error. status_code: %d", res.StatusCode))
 	}
+}
+
+func (t *Tsutsu) DeleteRouting(jobCategory string) (model.Routing, error) {
+	url := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
+	decoder, err := put(url, nil)
+	if err != nil {
+		return model.Routing{}, err
+	}
+
+	defer decoder.Close()
+
+	var routing model.Routing
+	if err := decoder.Decode(&decoder); err != nil {
+		return model.Routing{}, err
+	}
+	return routing, nil
 }
