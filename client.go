@@ -68,7 +68,7 @@ func (t *Tsutsu) Queue(name string) (model.Queue, error) {
 	return queue, nil
 }
 
-func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) error {
+func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) (model.Queue, error) {
 	m := model.Queue{
 		Name:            name,
 		PollingInterval: pollingInterval,
@@ -77,30 +77,59 @@ func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) erro
 
 	buf, err := json.Marshal(&m)
 	if err != nil {
-		return err
+		return model.Queue{}, err
 	}
 
 	r := bytes.NewReader(buf)
 	url := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
 	req, err := http.NewRequest(http.MethodPut, url, r)
 	if err != nil {
-		return err
+		return model.Queue{}, err
 	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return model.Queue{}, err
 	}
 
 	defer res.Body.Close()
-	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
-		return err
-	}
 
 	if res.StatusCode == http.StatusOK {
-		return nil
+		decoder := json.NewDecoder(res.Body)
+		var queue model.Queue
+		if err := decoder.Decode(&queue); err != nil {
+			return model.Queue{}, err
+		}
+		return queue, err
 	} else {
-		return errors.New(fmt.Sprintf("create queue error. status_code: %d", res.StatusCode))
+		return model.Queue{}, errors.New(fmt.Sprintf("create queue error. status_code: %d", res.StatusCode))
+	}
+}
+
+func (t *Tsutsu) DeleteQueue(name string) (model.Queue, error) {
+	url := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
+
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return model.Queue{}, err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return model.Queue{}, err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusOK {
+		decoder := json.NewDecoder(res.Body)
+		var queue model.Queue
+		if err := decoder.Decode(&queue); err != nil {
+			return model.Queue{}, err
+		}
+		return queue, nil
+	} else {
+		return model.Queue{}, errors.New(fmt.Sprintf("delete error. status_code: %d", res.StatusCode))
 	}
 }
 
