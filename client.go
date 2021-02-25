@@ -9,6 +9,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 type Tsutsu struct {
@@ -282,4 +284,102 @@ func (t *Tsutsu) DeleteRouting(jobCategory string) (model.Routing, error) {
 		return model.Routing{}, err
 	}
 	return routing, nil
+}
+
+func (t *Tsutsu) Job() *JobInspector {
+	return newJobInspector(t)
+}
+
+type JobInspector struct {
+	client *Tsutsu
+	limit  uint
+	cursor string
+	order  string
+}
+
+func newJobInspector(client *Tsutsu) *JobInspector {
+	return &JobInspector{
+		client: client,
+		limit:  100,
+		cursor: "",
+		order:  "desc",
+	}
+}
+
+func (j *JobInspector) Limit(limit uint) *JobInspector {
+	j.limit = limit
+	return j
+}
+
+func (j *JobInspector) Asc() *JobInspector {
+	j.order = "asc"
+	return j
+}
+
+func (j *JobInspector) Desc() *JobInspector {
+	j.order = "desc"
+	return j
+}
+
+func (j *JobInspector) Cursor(cursor string) *JobInspector {
+	j.cursor = cursor
+	return j
+}
+
+func (j *JobInspector) queryString() string {
+	query := url.Values{}
+	query.Set("limit", strconv.Itoa(int(j.limit)))
+	query.Set("order", j.order)
+	if j.cursor != "" {
+		query.Set("cursor", j.cursor)
+	}
+	return query.Encode()
+}
+
+func (j *JobInspector) do(uri string) (JobsInfo, error) {
+	decoder, err := get(uri)
+	if err != nil {
+		return JobsInfo{}, err
+	}
+
+	defer decoder.Close()
+	var jobsInfo JobsInfo
+
+	if err := decoder.Decode(&jobsInfo); err != nil {
+		return JobsInfo{}, err
+	}
+
+	return jobsInfo, nil
+}
+
+func (j *JobInspector) Grabbed(queueName string) (JobsInfo, error) {
+	uri := fmt.Sprintf("%s/queue/%s/grabbed?%s", j.client.baseURL, queueName, j.queryString())
+	return j.do(uri)
+}
+
+func (j *JobInspector) Waiting(queueName string) (JobsInfo, error) {
+	uri := fmt.Sprintf("%s/queue/%s/waiting?%s", j.client.baseURL, queueName, j.queryString())
+	return j.do(uri)
+}
+
+func (j *JobInspector) Deferred(queueName string) (JobsInfo, error) {
+	uri := fmt.Sprintf("%s/queue/%s/deferred?%s", j.client.baseURL, queueName, j.queryString())
+	return j.do(uri)
+}
+
+func (j *JobInspector) Failed(queueName string) (FailedJobsInfo, error) {
+	uri := fmt.Sprintf("%s/queue/%s/failed?%s", j.client.baseURL, queueName, j.queryString())
+	decoder, err := get(uri)
+	if err != nil {
+		return FailedJobsInfo{}, err
+	}
+
+	defer decoder.Close()
+	var failedJobsInfo FailedJobsInfo
+
+	if err := decoder.Decode(&failedJobsInfo); err != nil {
+		return FailedJobsInfo{}, err
+	}
+
+	return failedJobsInfo, nil
 }
