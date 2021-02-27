@@ -280,7 +280,7 @@ func (t *Tsutsu) DeleteRouting(jobCategory string) (model.Routing, error) {
 	defer decoder.Close()
 
 	var routing model.Routing
-	if err := decoder.Decode(&decoder); err != nil {
+	if err := decoder.Decode(&routing); err != nil {
 		return model.Routing{}, err
 	}
 	return routing, nil
