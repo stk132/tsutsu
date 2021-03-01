@@ -47,12 +47,12 @@ func do(req *http.Request) (*httpBodyDecoder, error) {
 	return newHttpBodyDecoder(res.Body), nil
 }
 
-func put(url string, r io.Reader) (*httpBodyDecoder, error) {
-	return putWithContext(context.Background(), url, r)
+func put(uri string, r io.Reader) (*httpBodyDecoder, error) {
+	return putWithContext(context.Background(), uri, r)
 }
 
-func putWithContext(ctx context.Context, url string, r io.Reader) (*httpBodyDecoder, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, r)
+func putWithContext(ctx context.Context, uri string, r io.Reader) (*httpBodyDecoder, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, r)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +60,12 @@ func putWithContext(ctx context.Context, url string, r io.Reader) (*httpBodyDeco
 	return do(req)
 }
 
-func httpDelete(url string) (*httpBodyDecoder, error) {
-	return httpDeleteWithContext(context.Background(), url)
+func httpDelete(uri string) (*httpBodyDecoder, error) {
+	return httpDeleteWithContext(context.Background(), uri)
 }
 
-func httpDeleteWithContext(ctx context.Context, url string) (*httpBodyDecoder, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+func httpDeleteWithContext(ctx context.Context, uri string) (*httpBodyDecoder, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,11 @@ func httpDeleteWithContext(ctx context.Context, url string) (*httpBodyDecoder, e
 }
 
 func (t *Tsutsu) Queues() ([]model.Queue, error) {
-	decoder, err := get(t.baseURL + "/queues")
+	return t.QueuesWithContext(context.Background())
+}
+
+func (t *Tsutsu) QueuesWithContext(ctx context.Context) ([]model.Queue, error) {
+	decoder, err := getWithContext(ctx, t.baseURL+"/queues")
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +94,11 @@ func (t *Tsutsu) Queues() ([]model.Queue, error) {
 }
 
 func (t *Tsutsu) Queue(name string) (model.Queue, error) {
-	decoder, err := get(fmt.Sprintf("%s/queue/%s", t.baseURL, name))
+	return t.QueueWithContext(context.Background(), name)
+}
+
+func (t *Tsutsu) QueueWithContext(ctx context.Context, name string) (model.Queue, error) {
+	decoder, err := getWithContext(ctx, fmt.Sprintf("%s/queue/%s", t.baseURL, name))
 	if err != nil {
 		return model.Queue{}, err
 	}
@@ -106,8 +114,12 @@ func (t *Tsutsu) Queue(name string) (model.Queue, error) {
 }
 
 func (t *Tsutsu) Stats(queueName string) (QueueStats, error) {
-	url := fmt.Sprintf("%s/queue/%s/stats", t.baseURL, queueName)
-	decoder, err := get(url)
+	return t.StatsWithContext(context.Background(), queueName)
+}
+
+func (t *Tsutsu) StatsWithContext(ctx context.Context, queueName string) (QueueStats, error) {
+	uri := fmt.Sprintf("%s/queue/%s/stats", t.baseURL, queueName)
+	decoder, err := getWithContext(ctx, uri)
 	if err != nil {
 		return QueueStats{}, err
 	}
@@ -123,8 +135,12 @@ func (t *Tsutsu) Stats(queueName string) (QueueStats, error) {
 }
 
 func (t *Tsutsu) Node(queueName string) (NodeInfo, error) {
-	url := fmt.Sprintf("%s/queue/%s/node", t.baseURL, queueName)
-	decoder, err := get(url)
+	return t.NodeWithContext(context.Background(), queueName)
+}
+
+func (t *Tsutsu) NodeWithContext(ctx context.Context, queueName string) (NodeInfo, error) {
+	uri := fmt.Sprintf("%s/queue/%s/node", t.baseURL, queueName)
+	decoder, err := getWithContext(ctx, uri)
 	if err != nil {
 		return NodeInfo{}, err
 	}
@@ -139,6 +155,10 @@ func (t *Tsutsu) Node(queueName string) (NodeInfo, error) {
 }
 
 func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) (model.Queue, error) {
+	return t.CreateQueueWithContext(context.Background(), name, pollingInterval, maxWorkers)
+}
+
+func (t *Tsutsu) CreateQueueWithContext(ctx context.Context, name string, pollingInterval, maxWorkers uint) (model.Queue, error) {
 	m := model.Queue{
 		Name:            name,
 		PollingInterval: pollingInterval,
@@ -151,60 +171,48 @@ func (t *Tsutsu) CreateQueue(name string, pollingInterval, maxWorkers uint) (mod
 	}
 
 	r := bytes.NewReader(buf)
-	url := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
-	req, err := http.NewRequest(http.MethodPut, url, r)
+	uri := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
+	decoder, err := putWithContext(ctx, uri, r)
 	if err != nil {
 		return model.Queue{}, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
+	defer decoder.Close()
+
+	var queue model.Queue
+	if err := decoder.Decode(&queue); err != nil {
 		return model.Queue{}, err
 	}
 
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusOK {
-		decoder := json.NewDecoder(res.Body)
-		var queue model.Queue
-		if err := decoder.Decode(&queue); err != nil {
-			return model.Queue{}, err
-		}
-		return queue, err
-	} else {
-		return model.Queue{}, errors.New(fmt.Sprintf("create queue error. status_code: %d", res.StatusCode))
-	}
+	return queue, nil
 }
 
 func (t *Tsutsu) DeleteQueue(name string) (model.Queue, error) {
-	url := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
+	return t.DeleteQueueWithContext(context.Background(), name)
+}
 
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+func (t *Tsutsu) DeleteQueueWithContext(ctx context.Context, name string) (model.Queue, error) {
+	uri := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
+	decoder, err := httpDeleteWithContext(ctx, uri)
 	if err != nil {
 		return model.Queue{}, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
+	defer decoder.Close()
+
+	var queue model.Queue
+	if err := decoder.Decode(&queue); err != nil {
 		return model.Queue{}, err
 	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusOK {
-		decoder := json.NewDecoder(res.Body)
-		var queue model.Queue
-		if err := decoder.Decode(&queue); err != nil {
-			return model.Queue{}, err
-		}
-		return queue, nil
-	} else {
-		return model.Queue{}, errors.New(fmt.Sprintf("delete error. status_code: %d", res.StatusCode))
-	}
+	return queue, nil
 }
 
 func (t *Tsutsu) Routings() ([]model.Routing, error) {
-	decoder, err := get(t.baseURL + "/routings")
+	return t.RoutingsWithContext(context.Background())
+}
+
+func (t *Tsutsu) RoutingsWithContext(ctx context.Context) ([]model.Routing, error) {
+	decoder, err := getWithContext(ctx, t.baseURL+"/routings")
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +229,11 @@ func (t *Tsutsu) Routings() ([]model.Routing, error) {
 }
 
 func (t *Tsutsu) Routing(jobCategory string) (model.Routing, error) {
-	decoder, err := get(fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory))
+	return t.RoutingWithContext(context.Background(), jobCategory)
+}
+
+func (t *Tsutsu) RoutingWithContext(ctx context.Context, jobCategory string) (model.Routing, error) {
+	decoder, err := getWithContext(ctx, fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory))
 	if err != nil {
 		return model.Routing{}, err
 	}
@@ -237,6 +249,10 @@ func (t *Tsutsu) Routing(jobCategory string) (model.Routing, error) {
 }
 
 func (t *Tsutsu) CreateRouting(jobCategory, queueName string) (model.Routing, error) {
+	return t.CreateRoutingWithContext(context.Background(), jobCategory, queueName)
+}
+
+func (t *Tsutsu) CreateRoutingWithContext(ctx context.Context, jobCategory, queueName string) (model.Routing, error) {
 	rt := model.Routing{
 		QueueName:   queueName,
 		JobCategory: jobCategory,
@@ -248,34 +264,29 @@ func (t *Tsutsu) CreateRouting(jobCategory, queueName string) (model.Routing, er
 	}
 
 	r := bytes.NewReader(buf)
-	url := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
-	req, err := http.NewRequest(http.MethodPut, url, r)
+	uri := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
+	decoder, err := putWithContext(ctx, uri, r)
 	if err != nil {
 		return model.Routing{}, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
+	defer decoder.Close()
+
+	var routing model.Routing
+	if err := decoder.Decode(&routing); err != nil {
 		return model.Routing{}, err
 	}
 
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusOK {
-		decoder := json.NewDecoder(res.Body)
-		var routing model.Routing
-		if err := decoder.Decode(&routing); err != nil {
-			return model.Routing{}, err
-		}
-		return routing, nil
-	} else {
-		return model.Routing{}, errors.New(fmt.Sprintf("create routing error. status_code: %d", res.StatusCode))
-	}
+	return routing, nil
 }
 
 func (t *Tsutsu) DeleteRouting(jobCategory string) (model.Routing, error) {
-	url := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
-	decoder, err := httpDelete(url)
+	return t.DeleteRoutingWithContext(context.Background(), jobCategory)
+}
+
+func (t *Tsutsu) DeleteRoutingWithContext(ctx context.Context, jobCategory string) (model.Routing, error) {
+	uri := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
+	decoder, err := httpDeleteWithContext(ctx, uri)
 	if err != nil {
 		return model.Routing{}, err
 	}
@@ -339,8 +350,8 @@ func (j *JobInspector) queryString() string {
 	return query.Encode()
 }
 
-func (j *JobInspector) do(uri string) (JobsInfo, error) {
-	decoder, err := get(uri)
+func (j *JobInspector) do(ctx context.Context, uri string) (JobsInfo, error) {
+	decoder, err := getWithContext(ctx, uri)
 	if err != nil {
 		return JobsInfo{}, err
 	}
@@ -356,23 +367,35 @@ func (j *JobInspector) do(uri string) (JobsInfo, error) {
 }
 
 func (j *JobInspector) Grabbed(queueName string) (JobsInfo, error) {
+	return j.GrabbedWithContext(context.Background(), queueName)
+}
+
+func (j *JobInspector) GrabbedWithContext(ctx context.Context, queueName string) (JobsInfo, error) {
 	uri := fmt.Sprintf("%s/queue/%s/grabbed?%s", j.client.baseURL, queueName, j.queryString())
-	return j.do(uri)
+	return j.do(ctx, uri)
 }
 
 func (j *JobInspector) Waiting(queueName string) (JobsInfo, error) {
+	return j.WaitingWithContext(context.Background(), queueName)
+}
+
+func (j *JobInspector) WaitingWithContext(ctx context.Context, queueName string) (JobsInfo, error) {
 	uri := fmt.Sprintf("%s/queue/%s/waiting?%s", j.client.baseURL, queueName, j.queryString())
-	return j.do(uri)
+	return j.do(ctx, uri)
+}
+
+func (j *JobInspector) DeferredWithContext(ctx context.Context, queueName string) (JobsInfo, error) {
+	uri := fmt.Sprintf("%s/queue/%s/deferred?%s", j.client.baseURL, queueName, j.queryString())
+	return j.do(ctx, uri)
 }
 
 func (j *JobInspector) Deferred(queueName string) (JobsInfo, error) {
-	uri := fmt.Sprintf("%s/queue/%s/deferred?%s", j.client.baseURL, queueName, j.queryString())
-	return j.do(uri)
+	return j.DeferredWithContext(context.Background(), queueName)
 }
 
-func (j *JobInspector) Failed(queueName string) (FailedJobsInfo, error) {
+func (j *JobInspector) FailedWithContext(ctx context.Context, queueName string) (FailedJobsInfo, error) {
 	uri := fmt.Sprintf("%s/queue/%s/failed?%s", j.client.baseURL, queueName, j.queryString())
-	decoder, err := get(uri)
+	decoder, err := getWithContext(ctx, uri)
 	if err != nil {
 		return FailedJobsInfo{}, err
 	}
@@ -385,4 +408,8 @@ func (j *JobInspector) Failed(queueName string) (FailedJobsInfo, error) {
 	}
 
 	return failedJobsInfo, nil
+}
+
+func (j *JobInspector) Failed(queueName string) (FailedJobsInfo, error) {
+	return j.FailedWithContext(context.Background(), queueName)
 }

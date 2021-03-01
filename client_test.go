@@ -18,7 +18,7 @@ var FIREWORQ_URL = fmt.Sprintf("http://localhost:%s", FIREWORQ_PORT)
 
 func initRouting() (model.Routing, error) {
 	routing := model.Routing{
-		QueueName: "default",
+		QueueName:   "default",
 		JobCategory: "test_category",
 	}
 	buf, err := json.Marshal(&routing)
@@ -26,7 +26,7 @@ func initRouting() (model.Routing, error) {
 		return model.Routing{}, err
 	}
 	r := bytes.NewReader(buf)
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf(FIREWORQ_URL + "/routing/" + routing.JobCategory), r)
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf(FIREWORQ_URL+"/routing/"+routing.JobCategory), r)
 	if err != nil {
 		return model.Routing{}, err
 	}
@@ -86,12 +86,12 @@ func TestTsutsu_Queues(t1 *testing.T) {
 
 func TestTsutsu_CreateQueue(t1 *testing.T) {
 	wantQueue := model.Queue{
-		Name: "test_queue",
+		Name:            "test_queue",
 		PollingInterval: 100,
-		MaxWorkers: 1,
+		MaxWorkers:      1,
 	}
-	defer func(){
-		req, err := http.NewRequest(http.MethodDelete, FIREWORQ_URL + "/queue/" + wantQueue.Name, nil)
+	defer func() {
+		req, err := http.NewRequest(http.MethodDelete, FIREWORQ_URL+"/queue/"+wantQueue.Name, nil)
 		if err != nil {
 			t1.Error(err)
 		}
@@ -123,7 +123,7 @@ func TestTsutsu_CreateQueue(t1 *testing.T) {
 			name:   "should be created",
 			fields: fields{baseURL: FIREWORQ_URL},
 			args: args{
-				name: wantQueue.Name,
+				name:            wantQueue.Name,
 				pollingInterval: wantQueue.PollingInterval,
 				maxWorkers:      wantQueue.MaxWorkers},
 			want:    wantQueue,
@@ -153,28 +153,28 @@ func TestTsutsu_DeleteQueue(t1 *testing.T) {
 		PollingInterval: 100,
 		MaxWorkers:      20,
 	}
-	
+
 	buf, err := json.Marshal(&queue)
 	if err != nil {
 		t1.Error(err)
 	}
-	
+
 	r := bytes.NewReader(buf)
-	req, err := http.NewRequest(http.MethodPut, FIREWORQ_URL + "/queue/" + queue.Name, r)
+	req, err := http.NewRequest(http.MethodPut, FIREWORQ_URL+"/queue/"+queue.Name, r)
 	if err != nil {
 		t1.Error(err)
 	}
-	
+
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t1.Error(err)
 	}
-	
+
 	defer res.Body.Close()
 	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
 		t1.Error(err)
 	}
-	
+
 	type fields struct {
 		baseURL string
 	}
@@ -189,13 +189,13 @@ func TestTsutsu_DeleteQueue(t1 *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "should be delete",
-			fields:  fields{baseURL: FIREWORQ_URL},
-			args:    args{name: queue.Name	},
-			want:    model.Queue{
-				Name: queue.Name,
+			name:   "should be delete",
+			fields: fields{baseURL: FIREWORQ_URL},
+			args:   args{name: queue.Name},
+			want: model.Queue{
+				Name:            queue.Name,
 				PollingInterval: queue.PollingInterval,
-				MaxWorkers: queue.MaxWorkers,
+				MaxWorkers:      queue.MaxWorkers,
 			},
 			wantErr: false,
 		},
@@ -231,7 +231,7 @@ func TestTsutsu_Routings(t1 *testing.T) {
 	}
 
 	defer func() {
-		req, err := http.NewRequest(http.MethodDelete, FIREWORQ_URL + "/queue/" + routing.JobCategory, nil)
+		req, err := http.NewRequest(http.MethodDelete, FIREWORQ_URL+"/queue/"+routing.JobCategory, nil)
 		if err != nil {
 			t1.Error(err)
 		}
@@ -256,9 +256,9 @@ func TestTsutsu_Routings(t1 *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "should be add",
-			fields:  fields{baseURL: FIREWORQ_URL},
-			want:    []model.Routing{
+			name:   "should be add",
+			fields: fields{baseURL: FIREWORQ_URL},
+			want: []model.Routing{
 				routing,
 			},
 			wantErr: false,
@@ -327,7 +327,7 @@ func TestTsutsu_Routing(t1 *testing.T) {
 
 func TestTsutsu_CreateRouting(t1 *testing.T) {
 	routing := model.Routing{
-		QueueName: "default",
+		QueueName:   "default",
 		JobCategory: "test_category",
 	}
 
@@ -346,11 +346,11 @@ func TestTsutsu_CreateRouting(t1 *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "should be created",
-			fields:  fields{baseURL: FIREWORQ_URL},
-			args:    args{
+			name:   "should be created",
+			fields: fields{baseURL: FIREWORQ_URL},
+			args: args{
 				jobCategory: routing.JobCategory,
-				queueName: routing.QueueName,
+				queueName:   routing.QueueName,
 			},
 			want:    routing,
 			wantErr: false,
@@ -372,7 +372,7 @@ func TestTsutsu_CreateRouting(t1 *testing.T) {
 		})
 	}
 
-	req, err := http.NewRequest(http.MethodDelete, FIREWORQ_URL + "/routing/" + routing.JobCategory, nil)
+	req, err := http.NewRequest(http.MethodDelete, FIREWORQ_URL+"/routing/"+routing.JobCategory, nil)
 	if err != nil {
 		t1.Error(err)
 	}
@@ -407,9 +407,9 @@ func TestTsutsu_DeleteRouting(t1 *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "should be delete",
-			fields:  fields{baseURL: FIREWORQ_URL},
-			args:    args{
+			name:   "should be delete",
+			fields: fields{baseURL: FIREWORQ_URL},
+			args: args{
 				jobCategory: routing.JobCategory,
 			},
 			want:    routing,
