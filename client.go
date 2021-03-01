@@ -2,12 +2,12 @@ package tsutsu
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/fireworq/fireworq/model"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -22,20 +22,15 @@ func NewTsutsu(baseURL string) *Tsutsu {
 }
 
 func get(url string) (*httpBodyDecoder, error) {
-	res, err := http.Get(url)
+	return getWithContext(context.Background(), url)
+}
+
+func getWithContext(ctx context.Context, url string) (*httpBodyDecoder, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	if res.StatusCode != http.StatusOK {
-		if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
-			return nil, err
-		}
-		defer res.Body.Close()
-		return nil, errors.New(fmt.Sprintf("status_code: %d", res.StatusCode))
-	}
-
-	return newHttpBodyDecoder(res.Body), nil
+	return do(req)
 }
 
 func do(req *http.Request) (*httpBodyDecoder, error) {
@@ -53,7 +48,11 @@ func do(req *http.Request) (*httpBodyDecoder, error) {
 }
 
 func put(url string, r io.Reader) (*httpBodyDecoder, error) {
-	req, err := http.NewRequest(http.MethodPut, url, r)
+	return putWithContext(context.Background(), url, r)
+}
+
+func putWithContext(ctx context.Context, url string, r io.Reader) (*httpBodyDecoder, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, r)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +61,11 @@ func put(url string, r io.Reader) (*httpBodyDecoder, error) {
 }
 
 func httpDelete(url string) (*httpBodyDecoder, error) {
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	return httpDeleteWithContext(context.Background(), url)
+}
+
+func httpDeleteWithContext(ctx context.Context, url string) (*httpBodyDecoder, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return nil, err
 	}
