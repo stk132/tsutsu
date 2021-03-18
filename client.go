@@ -15,26 +15,22 @@ import (
 
 type Tsutsu struct {
 	baseURL string
+	client  *http.Client
 }
 
 func NewTsutsu(baseURL string) *Tsutsu {
-	return &Tsutsu{baseURL}
+	return &Tsutsu{baseURL: baseURL, client: http.DefaultClient}
 }
 
-func get(url string) (*httpBodyDecoder, error) {
-	return getWithContext(context.Background(), url)
-}
-
-func getWithContext(ctx context.Context, url string) (*httpBodyDecoder, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
+func NewTsutsuWithClient(baseURL string, client *http.Client) *Tsutsu {
+	return &Tsutsu{
+		baseURL: baseURL,
+		client:  client,
 	}
-	return do(req)
 }
 
-func do(req *http.Request) (*httpBodyDecoder, error) {
-	res, err := http.DefaultClient.Do(req)
+func (t *Tsutsu) do(req *http.Request) (*httpBodyDecoder, error) {
+	res, err := t.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -47,30 +43,42 @@ func do(req *http.Request) (*httpBodyDecoder, error) {
 	return newHttpBodyDecoder(res.Body), nil
 }
 
-func put(uri string, r io.Reader) (*httpBodyDecoder, error) {
-	return putWithContext(context.Background(), uri, r)
+func (t *Tsutsu) getWithContext(ctx context.Context, uri string) (*httpBodyDecoder, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+	return t.do(req)
 }
 
-func putWithContext(ctx context.Context, uri string, r io.Reader) (*httpBodyDecoder, error) {
+func (t *Tsutsu) get(uri string) (*httpBodyDecoder, error) {
+	return t.getWithContext(context.Background(), uri)
+}
+
+func (t *Tsutsu) putWithContext(ctx context.Context, uri string, r io.Reader) (*httpBodyDecoder, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, r)
 	if err != nil {
 		return nil, err
 	}
 
-	return do(req)
+	return t.do(req)
 }
 
-func httpDelete(uri string) (*httpBodyDecoder, error) {
-	return httpDeleteWithContext(context.Background(), uri)
+func (t *Tsutsu) put(uri string, r io.Reader) (*httpBodyDecoder, error) {
+	return t.putWithContext(context.Background(), uri, r)
 }
 
-func httpDeleteWithContext(ctx context.Context, uri string) (*httpBodyDecoder, error) {
+func (t *Tsutsu) httpDeleteWithContext(ctx context.Context, uri string) (*httpBodyDecoder, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, uri, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return do(req)
+	return t.do(req)
+}
+
+func (t *Tsutsu) httpDelete(uri string) (*httpBodyDecoder, error) {
+	return t.httpDeleteWithContext(context.Background(), uri)
 }
 
 func (t *Tsutsu) Queues() ([]model.Queue, error) {
@@ -78,7 +86,7 @@ func (t *Tsutsu) Queues() ([]model.Queue, error) {
 }
 
 func (t *Tsutsu) QueuesWithContext(ctx context.Context) ([]model.Queue, error) {
-	decoder, err := getWithContext(ctx, t.baseURL+"/queues")
+	decoder, err := t.getWithContext(ctx, t.baseURL+"/queues")
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +106,7 @@ func (t *Tsutsu) Queue(name string) (model.Queue, error) {
 }
 
 func (t *Tsutsu) QueueWithContext(ctx context.Context, name string) (model.Queue, error) {
-	decoder, err := getWithContext(ctx, fmt.Sprintf("%s/queue/%s", t.baseURL, name))
+	decoder, err := t.getWithContext(ctx, fmt.Sprintf("%s/queue/%s", t.baseURL, name))
 	if err != nil {
 		return model.Queue{}, err
 	}
@@ -119,7 +127,7 @@ func (t *Tsutsu) Stats(queueName string) (QueueStats, error) {
 
 func (t *Tsutsu) StatsWithContext(ctx context.Context, queueName string) (QueueStats, error) {
 	uri := fmt.Sprintf("%s/queue/%s/stats", t.baseURL, queueName)
-	decoder, err := getWithContext(ctx, uri)
+	decoder, err := t.getWithContext(ctx, uri)
 	if err != nil {
 		return QueueStats{}, err
 	}
@@ -140,7 +148,7 @@ func (t *Tsutsu) Node(queueName string) (NodeInfo, error) {
 
 func (t *Tsutsu) NodeWithContext(ctx context.Context, queueName string) (NodeInfo, error) {
 	uri := fmt.Sprintf("%s/queue/%s/node", t.baseURL, queueName)
-	decoder, err := getWithContext(ctx, uri)
+	decoder, err := t.getWithContext(ctx, uri)
 	if err != nil {
 		return NodeInfo{}, err
 	}
@@ -172,7 +180,7 @@ func (t *Tsutsu) CreateQueueWithContext(ctx context.Context, name string, pollin
 
 	r := bytes.NewReader(buf)
 	uri := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
-	decoder, err := putWithContext(ctx, uri, r)
+	decoder, err := t.putWithContext(ctx, uri, r)
 	if err != nil {
 		return model.Queue{}, err
 	}
@@ -193,7 +201,7 @@ func (t *Tsutsu) DeleteQueue(name string) (model.Queue, error) {
 
 func (t *Tsutsu) DeleteQueueWithContext(ctx context.Context, name string) (model.Queue, error) {
 	uri := fmt.Sprintf("%s/queue/%s", t.baseURL, name)
-	decoder, err := httpDeleteWithContext(ctx, uri)
+	decoder, err := t.httpDeleteWithContext(ctx, uri)
 	if err != nil {
 		return model.Queue{}, err
 	}
@@ -212,7 +220,7 @@ func (t *Tsutsu) Routings() ([]model.Routing, error) {
 }
 
 func (t *Tsutsu) RoutingsWithContext(ctx context.Context) ([]model.Routing, error) {
-	decoder, err := getWithContext(ctx, t.baseURL+"/routings")
+	decoder, err := t.getWithContext(ctx, t.baseURL+"/routings")
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +241,7 @@ func (t *Tsutsu) Routing(jobCategory string) (model.Routing, error) {
 }
 
 func (t *Tsutsu) RoutingWithContext(ctx context.Context, jobCategory string) (model.Routing, error) {
-	decoder, err := getWithContext(ctx, fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory))
+	decoder, err := t.getWithContext(ctx, fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory))
 	if err != nil {
 		return model.Routing{}, err
 	}
@@ -265,7 +273,7 @@ func (t *Tsutsu) CreateRoutingWithContext(ctx context.Context, jobCategory, queu
 
 	r := bytes.NewReader(buf)
 	uri := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
-	decoder, err := putWithContext(ctx, uri, r)
+	decoder, err := t.putWithContext(ctx, uri, r)
 	if err != nil {
 		return model.Routing{}, err
 	}
@@ -286,7 +294,7 @@ func (t *Tsutsu) DeleteRouting(jobCategory string) (model.Routing, error) {
 
 func (t *Tsutsu) DeleteRoutingWithContext(ctx context.Context, jobCategory string) (model.Routing, error) {
 	uri := fmt.Sprintf("%s/routing/%s", t.baseURL, jobCategory)
-	decoder, err := httpDeleteWithContext(ctx, uri)
+	decoder, err := t.httpDeleteWithContext(ctx, uri)
 	if err != nil {
 		return model.Routing{}, err
 	}
@@ -351,7 +359,7 @@ func (j *JobInspector) queryString() string {
 }
 
 func (j *JobInspector) do(ctx context.Context, uri string) (JobsInfo, error) {
-	decoder, err := getWithContext(ctx, uri)
+	decoder, err := j.client.getWithContext(ctx, uri)
 	if err != nil {
 		return JobsInfo{}, err
 	}
@@ -395,7 +403,7 @@ func (j *JobInspector) Deferred(queueName string) (JobsInfo, error) {
 
 func (j *JobInspector) FailedWithContext(ctx context.Context, queueName string) (FailedJobsInfo, error) {
 	uri := fmt.Sprintf("%s/queue/%s/failed?%s", j.client.baseURL, queueName, j.queryString())
-	decoder, err := getWithContext(ctx, uri)
+	decoder, err := j.client.getWithContext(ctx, uri)
 	if err != nil {
 		return FailedJobsInfo{}, err
 	}

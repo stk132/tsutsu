@@ -69,9 +69,7 @@ func TestTsutsu_Queues(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.Queues()
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("Queues() error = %v, wantErr %v", err, tt.wantErr)
@@ -132,9 +130,7 @@ func TestTsutsu_CreateQueue(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.CreateQueue(tt.args.name, tt.args.pollingInterval, tt.args.maxWorkers)
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("CreateQueue() error = %v, wantErr %v", err, tt.wantErr)
@@ -209,9 +205,7 @@ func TestTsutsu_DeleteQueue(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.DeleteQueue(tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("DeleteQueue() error = %v, wantErr %v", err, tt.wantErr)
@@ -266,9 +260,7 @@ func TestTsutsu_Routings(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.Routings()
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("Routings() error = %v, wantErr %v", err, tt.wantErr)
@@ -310,9 +302,7 @@ func TestTsutsu_Routing(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.Routing(tt.args.jobCategory)
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("Routing() error = %v, wantErr %v", err, tt.wantErr)
@@ -358,9 +348,7 @@ func TestTsutsu_CreateRouting(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.CreateRouting(tt.args.jobCategory, tt.args.queueName)
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("CreateRouting() error = %v, wantErr %v", err, tt.wantErr)
@@ -425,9 +413,7 @@ func TestTsutsu_DeleteRouting(t1 *testing.T) {
 	}
 	for _, tt := range tests {
 		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Tsutsu{
-				baseURL: tt.fields.baseURL,
-			}
+			t := NewTsutsu(tt.fields.baseURL)
 			got, err := t.DeleteRouting(tt.args.jobCategory)
 			if (err != nil) != tt.wantErr {
 				t1.Errorf("DeleteRouting() error = %v, wantErr %v", err, tt.wantErr)
